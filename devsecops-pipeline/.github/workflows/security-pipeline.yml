@@ -155,10 +155,64 @@ jobs:
         name: snyk-results
         path: snyk.sarif
 
+  dockerfile-scan:
+    name: Dockerfile Security Scan
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Hadolint Dockerfile Linter
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: Dockerfile
+        format: sarif
+        output-file: hadolint-results.sarif
+        no-fail: true
+
+    - name: Run Trivy Dockerfile scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'config'
+        scan-ref: 'Dockerfile'
+        format: 'sarif'
+        output: 'trivy-dockerfile-results.sarif'
+
+    - name: Run Snyk Dockerfile scan
+      uses: snyk/actions/docker@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        image: python:3.11-slim
+        args: --file=Dockerfile --severity-threshold=medium
+
+    - name: Upload Hadolint results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: hadolint-results.sarif
+
+    - name: Upload Trivy Dockerfile results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: trivy-dockerfile-results.sarif
+
+    - name: Upload Dockerfile scan results as artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: dockerfile-scan-results
+        path: |
+          hadolint-results.sarif
+          trivy-dockerfile-results.sarif
+
   build-and-scan:
     name: Build & Scan Container
     runs-on: ubuntu-latest
-    needs: [sast-sonarqube, sca-snyk]
+    needs: [sast-sonarqube, sca-snyk, dockerfile-scan]
     
     steps:
     - name: Checkout code
@@ -242,7 +296,7 @@ jobs:
   security-summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [sast-sonarqube, sca-snyk, build-and-scan]
+    needs: [sast-sonarqube, sca-snyk, dockerfile-scan, build-and-scan]
     if: always()
     
     steps:
@@ -259,7 +313,8 @@ jobs:
         echo "- ✅ **Lint & Test**: ${{ needs.lint-and-test.result }}" >> $GITHUB_STEP_SUMMARY
         echo "- 🔍 **SAST (SonarQube)**: ${{ needs.sast-sonarqube.result }}" >> $GITHUB_STEP_SUMMARY
         echo "- 📦 **SCA (Snyk)**: ${{ needs.sca-snyk.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- 🐳 **Container Scan**: ${{ needs.build-and-scan.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- � **Dockerfile Scan**: ${{ needs.dockerfile-scan.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- �🐳 **Container Scan**: ${{ needs.build-and-scan.result }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Security Reports:" >> $GITHUB_STEP_SUMMARY
         echo "Security scan results have been uploaded to the GitHub Security tab." >> $GITHUB_STEP_SUMMARY
