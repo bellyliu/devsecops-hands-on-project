@@ -1,6 +1,6 @@
 # DevSecOps CI/CD Pipeline
 
-A comprehensive DevSecOps CI/CD pipeline implementation using GitHub Actions for a Python Flask application. This project demonstrates the integration of security scanning tools including Static Application Security Testing (SAST), Software Composition Analysis (SCA), and container vulnerability scanning.
+A comprehensive DevSecOps CI/CD pipeline implementation using GitHub Actions for a Python Flask application. This project demonstrates the integration of security scanning tools including Static Application Security Testing (SAST), Software Composition Analysis (SCA), container vulnerability scanning, and Dockerfile security analysis.
 
 ## 🏗️ Project Overview
 
@@ -11,8 +11,28 @@ This project showcases a complete DevSecOps pipeline that includes:
 - **Security Integration**:
   - **SAST**: SonarQube for static code analysis
   - **SCA**: Snyk for dependency vulnerability scanning
+  - **Dockerfile Security**: Hadolint for Dockerfile best practices and security
   - **Container Scanning**: Trivy and Docker Scout for container security
 - **Quality Gates**: Automated code quality checks and security validations
+
+## 📚 Documentation
+
+### 📖 Security Tools Guides
+
+For detailed information about each security tool, including setup, configuration, and troubleshooting:
+
+- **[📋 Documentation Index](./docs/README.md)** - Complete overview of all security tools
+- **[🔍 SonarQube Guide](./docs/sonarqube-guide.md)** - SAST analysis and code quality
+- **[📦 Snyk Guide](./docs/snyk-guide.md)** - Dependency vulnerability scanning
+- **[🐳 Trivy Guide](./docs/trivy-guide.md)** - Container and infrastructure security
+- **[📋 Hadolint Guide](./docs/hadolint-guide.md)** - Dockerfile security and best practices
+- **[🔧 Troubleshooting Guide](./docs/troubleshooting-guide.md)** - Common issues and solutions
+
+### 🚨 Quick Help
+
+- **Pipeline failing?** → Check the [Troubleshooting Guide](./docs/troubleshooting-guide.md)
+- **Need to understand a tool?** → See individual tool guides in [docs/](./docs/)
+- **Setting up locally?** → Follow setup instructions in each tool's guide
 
 ## 📁 Project Structure
 
@@ -20,7 +40,14 @@ This project showcases a complete DevSecOps pipeline that includes:
 devsecops-pipeline/
 ├── .github/
 │   └── workflows/
-│       └── security-pipeline.yml    # Main CI/CD pipeline
+│       └── security-pipeline.yml    # Main CI/CD pipeline with security scanning
+├── docs/                            # Comprehensive security tools documentation
+│   ├── README.md                    # Documentation index and overview
+│   ├── sonarqube-guide.md          # SonarQube SAST guide with examples
+│   ├── snyk-guide.md               # Snyk SCA guide with vulnerability examples
+│   ├── trivy-guide.md              # Trivy container security guide
+│   ├── hadolint-guide.md           # Hadolint Dockerfile security guide
+│   └── troubleshooting-guide.md    # Common issues and emergency procedures
 ├── app.py                           # Flask application
 ├── requirements.txt                 # Python dependencies
 ├── Dockerfile                       # Container configuration
@@ -33,7 +60,7 @@ devsecops-pipeline/
 
 ## 🚀 Pipeline Stages
 
-The CI/CD pipeline consists of five main stages:
+The CI/CD pipeline consists of six main stages:
 
 ### 1. **Lint & Test**
 
@@ -48,6 +75,33 @@ The CI/CD pipeline consists of five main stages:
 - Code quality and security vulnerability detection
 - Coverage report generation
 - Quality gate validation
+
+### 3. **SCA - Snyk Vulnerability Scan**
+
+- Software Composition Analysis
+- Dependency vulnerability scanning
+- SARIF report generation for GitHub Security tab
+- High severity threshold enforcement
+
+### 4. **Dockerfile Security Scan**
+
+- **Hadolint**: Dockerfile linting and security best practices
+- **Trivy**: Dockerfile configuration scanning
+- **Snyk**: Base image vulnerability analysis
+- SARIF integration with GitHub Security tab
+
+### 5. **Build & Scan Container**
+
+- Multi-platform Docker image build (AMD64/ARM64)
+- Container vulnerability scanning with Trivy
+- Docker Scout security analysis
+- Image registry push (GitHub Container Registry)
+
+### 6. **Security Summary**
+
+- Consolidated security report generation
+- Pipeline status summary
+- Artifact collection and organization
 
 ### 3. **SCA - Snyk Vulnerability Scan**
 
@@ -264,18 +318,28 @@ The pipeline uses GitHub Container Registry (ghcr.io) by default, which requires
 - **Tool**: SonarQube
 - **Scans**: Code quality, security hotspots, vulnerabilities
 - **Integration**: Quality gates prevent merge on security issues
+- **Coverage**: SQL injection, XSS, hard-coded credentials, crypto issues
 
 ### Software Composition Analysis (SCA)
 
 - **Tool**: Snyk
 - **Scans**: Known vulnerabilities in dependencies
 - **Integration**: SARIF upload to GitHub Security tab
+- **Features**: CVE detection, license compliance, fix recommendations
+
+### Dockerfile Security Analysis
+
+- **Tools**: Hadolint, Trivy, Snyk
+- **Scans**: Dockerfile best practices, configuration security, base image vulnerabilities
+- **Integration**: SARIF reports, GitHub Security tab
+- **Coverage**: Root user detection, version pinning, security misconfigurations
 
 ### Container Security Scanning
 
 - **Tools**: Trivy, Docker Scout
-- **Scans**: Base image vulnerabilities, misconfigurations
+- **Scans**: Base image vulnerabilities, misconfigurations, runtime security
 - **Integration**: Multi-platform scanning, SARIF reports
+- **Features**: OS package vulnerabilities, language-specific dependencies
 
 ### Additional Security Features
 
@@ -283,6 +347,7 @@ The pipeline uses GitHub Container Registry (ghcr.io) by default, which requires
 - **Minimal base image**: Python slim image reduces attack surface
 - **Health checks**: Container health monitoring
 - **Security headers**: Can be extended with Flask-Security
+- **Secrets management**: Environment variable based configuration
 
 ## 📊 Monitoring and Reporting
 
