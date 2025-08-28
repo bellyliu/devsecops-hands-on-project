@@ -1,4 +1,4 @@
-[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=bellyliu_devsecops-pipeline)](https://sonarcloud.io/summary/new_code?id=bellyliu_devsecops-pipeline)
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=bellyliu_devsecops-hands-on-project)](https://sonarcloud.io/summary/new_code?id=bellyliu_devsecops-hands-on-project)
 
 # DevSecOps CI/CD Pipeline
 
