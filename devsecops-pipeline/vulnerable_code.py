@@ -9,8 +9,12 @@ import os
 import sqlite3
 from flask import Flask, request, escape
 import hashlib
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
+csrf = CSRFProtect()
+csrf.init_app(app)
+
 
 # ❌ SECURITY ISSUE: Hard-coded credentials (SonarQube will detect this)
 DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
@@ -95,4 +99,4 @@ def vulnerable_file_handling():
 
 if __name__ == '__main__':
     # ❌ SECURITY ISSUE: Debug mode in production
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000)
