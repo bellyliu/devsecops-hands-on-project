@@ -139,3 +139,4 @@ trivy-results.json
 Thumbs.db
 
 setup-git.sh
+*.db
