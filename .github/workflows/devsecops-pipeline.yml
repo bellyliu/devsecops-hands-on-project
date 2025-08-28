@@ -133,10 +133,8 @@ jobs:
       with:
         projectBaseDir: devsecops-pipeline
         args: >
-          -Dsonar.projectKey=devsecops-pipeline
+          -Dsonar.projectKey=${{ github.repository_owner }}_devsecops-pipeline
           -Dsonar.organization=${{ github.repository_owner }}
-          -Dsonar.qualitygate.wait=true
-          -Dsonar.qualitygate.timeout=300
 
     - name: Upload SonarCloud results
       uses: actions/upload-artifact@v4
