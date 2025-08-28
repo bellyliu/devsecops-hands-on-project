@@ -44,25 +44,25 @@ jobs:
     - name: Code formatting check with Black
       run: |
         cd devsecops-pipeline
-        black --check --diff .
+        black --check --diff --exclude="examples/" .
 
     - name: Import sorting check with isort
       run: |
         cd devsecops-pipeline
-        isort --check-only --diff .
+        isort --check-only --diff --skip-glob="examples/*" .
 
     - name: Lint with flake8
       run: |
         cd devsecops-pipeline
         # Stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=examples/
         # Exit-zero treats all errors as warnings
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics --exclude=examples/
 
     - name: Run unit tests
       run: |
         cd devsecops-pipeline
-        python -m pytest test_app.py -v --tb=short
+        python -m pytest test_app.py -v --tb=short --ignore=examples/
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
@@ -97,7 +97,7 @@ jobs:
     - name: Run tests with coverage
       run: |
         cd devsecops-pipeline
-        coverage run -m pytest test_app.py
+        coverage run -m pytest test_app.py --ignore=examples/
         coverage xml
 
     - name: SonarCloud Scan

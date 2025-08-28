@@ -13,6 +13,7 @@ extend-exclude = '''
   | \.venv
   | build
   | dist
+  | examples
 )/
 '''
 
@@ -20,6 +21,7 @@ extend-exclude = '''
 profile = "black"
 multi_line_output = 3
 line_length = 88
+skip_glob = ["examples/*"]
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -29,5 +31,5 @@ python_files = [
     "test_*.py",
     "*_test.py",
 ]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --ignore=examples/"
 junit_family = "xunit2"
