@@ -29,8 +29,8 @@ def get_vulnerable_user():
     cursor = conn.cursor()
 
     # This is vulnerable to SQL injection
-    query = f"SELECT * FROM users WHERE id = {user_id}"
-    cursor.execute(query)
+    query = f"SELECT * FROM users WHERE id = :id"
+    cursor.execute(query, {"id": user_id})
     result = cursor.fetchone()
 
     conn.close()
