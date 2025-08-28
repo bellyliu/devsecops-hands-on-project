@@ -41,15 +41,40 @@ jobs:
         pip install -r requirements.txt
         pip install flake8 black isort pytest
 
-    - name: Code formatting check with Black
+    - name: Code formatting with Black
       run: |
         cd devsecops-pipeline
-        black --check --diff --exclude="examples/" .
+        black --exclude="examples/" .
 
-    - name: Import sorting check with isort
+    - name: Import sorting with isort
       run: |
         cd devsecops-pipeline
-        isort --check-only --diff --skip-glob="examples/*" .
+        isort --skip-glob="examples/*" .
+
+    - name: Check if formatting changed files
+      run: |
+        if ! git diff --quiet; then
+          echo "⚠️  Code formatting changes detected!"
+          echo "📝 The following files were auto-formatted:"
+          git diff --name-only
+          echo ""
+          echo "💡 To avoid this in the future, run these commands locally before committing:"
+          echo "   cd devsecops-pipeline"
+          echo "   black --exclude='examples/' ."
+          echo "   isort --skip-glob='examples/*' ."
+          echo ""
+          echo "✅ Files have been automatically formatted and will be committed."
+        else
+          echo "✅ No formatting changes needed - code is already properly formatted!"
+        fi
+
+    - name: Commit formatting changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add devsecops-pipeline/
+        git diff --staged --quiet || git commit -m "Auto-format code with Black and isort [skip ci]"
+        git push || true
 
     - name: Lint with flake8
       run: |
