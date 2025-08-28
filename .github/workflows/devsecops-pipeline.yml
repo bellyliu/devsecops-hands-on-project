@@ -215,7 +215,7 @@ jobs:
   build-and-scan:
     name: Build & Scan Container
     runs-on: ubuntu-latest
-    needs: [sast-sonarqube, sca-snyk, dockerfile-scan]
+    needs: [sast-sonarcloud, sca-snyk, dockerfile-scan]
     
     steps:
     - name: Checkout code
