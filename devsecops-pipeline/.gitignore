@@ -137,3 +137,5 @@ trivy-results.json
 # OS
 .DS_Store
 Thumbs.db
+
+setup-git.sh
