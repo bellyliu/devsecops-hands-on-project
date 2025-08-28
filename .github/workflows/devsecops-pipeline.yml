@@ -141,8 +141,8 @@ jobs:
         sonar-scanner \
           -Dsonar.projectKey=bellyliu_devsecops-pipeline \
           -Dsonar.organization=bellyliu \
-          -Dsonar.sources=.
-
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.sources=. \
 
     - name: Upload SonarCloud results
       uses: actions/upload-artifact@v4
