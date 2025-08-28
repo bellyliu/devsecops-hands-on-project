@@ -87,7 +87,7 @@ jobs:
     - name: Run unit tests
       run: |
         cd devsecops-pipeline
-        python -m pytest test_app.py -v --tb=short --ignore=examples/
+        python -m pytest test_app.py test_vulnerable_code.py -v --tb=short --ignore=examples/
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
@@ -122,7 +122,7 @@ jobs:
     - name: Run tests with coverage
       run: |
         cd devsecops-pipeline
-        coverage run -m pytest test_app.py --ignore=examples/
+        coverage run -m pytest test_app.py test_vulnerable_code.py --ignore=examples/
         coverage xml
 
     - name: Run SonarCloud Scan
