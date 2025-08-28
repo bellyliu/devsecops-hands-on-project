@@ -5,10 +5,11 @@ This file is for educational purposes to show how security tools detect problems
 DO NOT USE THIS CODE IN PRODUCTION!
 """
 
+import hashlib
 import os
 import sqlite3
+
 from flask import Flask, request
-import hashlib
 
 app = Flask(__name__)
 
