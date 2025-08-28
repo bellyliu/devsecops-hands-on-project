@@ -125,36 +125,14 @@ jobs:
         coverage run -m pytest test_app.py --ignore=examples/
         coverage xml
 
-    - name: Install SonarCloud CLI
-      run: |
-        # Download and install SonarCloud CLI
-        wget -q https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
-        unzip -q sonar-scanner-cli-5.0.1.3006-linux.zip
-        echo "$(pwd)/sonar-scanner-5.0.1.3006-linux/bin" >> $GITHUB_PATH
-
     - name: Run SonarCloud Scan
+      uses: SonarSource/sonarqube-scan-action@v5.3.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      run: |
-        cd devsecops-pipeline
-        sonar-scanner \
-          -Dsonar.projectKey=bellyliu_devsecops-pipeline \
-          -Dsonar.organization=bellyliu \
-          -Dsonar.host.url=https://sonarcloud.io \
-          -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-          -Dsonar.projectName="DevSecOps Pipeline Flask App" \
-          -Dsonar.projectVersion=1.0.0 \
-          -Dsonar.sources=. \
-          -Dsonar.exclusions=**/*test*/**,**/.github/**,**/venv/**,**/__pycache__/**,**/.git/**,**/*.md,**/docs/**,**/examples/** \
-          -Dsonar.python.coverage.reportPaths=coverage.xml \
-          -Dsonar.python.version=3.11 \
-          -Dsonar.branch.name=${{ github.ref_name }} \
-          -Dsonar.scm.provider=git \
-          -Dsonar.sourceEncoding=UTF-8 \
-          -Dsonar.qualitygate.wait=true \
-          -Dsonar.qualitygate.timeout=300 \
-          -Dsonar.verbose=true
+        SONAR_HOST_URL: https://sonarcloud.io
+      with:
+        projectBaseDir: devsecops-pipeline
 
     - name: Upload SonarCloud results
       uses: actions/upload-artifact@v4
