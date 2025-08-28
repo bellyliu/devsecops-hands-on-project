@@ -132,6 +132,11 @@ jobs:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       with:
         projectBaseDir: devsecops-pipeline
+        args: >
+          -Dsonar.projectBaseDir=devsecops-pipeline
+          -Dsonar.projectKey=${{ github.repository_owner }}_devsecops-pipeline
+          -Dsonar.organization=${{ github.repository_owner }}
+          -Dsonar.verbose=true
 
     - name: Upload SonarCloud results
       uses: actions/upload-artifact@v4
