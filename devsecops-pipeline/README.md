@@ -1,3 +1,5 @@
+[![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-light.svg)](https://sonarcloud.io/summary/new_code?id=bellyliu_devsecops-pipeline)
+
 # DevSecOps CI/CD Pipeline
 
 A comprehensive DevSecOps CI/CD pipeline implementation using GitHub Actions for a Python Flask application. This project demonstrates the integration of security scanning tools including Static Application Security Testing (SAST), Software Composition Analysis (SCA), container vulnerability scanning, and Dockerfile security analysis.
