@@ -72,13 +72,25 @@ def insecure_config():
 
 def vulnerable_file_handling():
     """
-    ❌ SECURITY ISSUE: Path traversal vulnerability
-    SonarQube will detect this as a security hotspot
+    ✅ FIXED: Path traversal vulnerability prevented with proper validation
     """
     filename = request.args.get('file')
-    # No path validation - allows directory traversal
-    with open(f"/app/files/{filename}", 'r') as f:
-        return f.read()
+    if not filename:
+        return "No file specified"
+    
+    # Sanitize filename to prevent path traversal
+    filename = os.path.basename(filename)
+    safe_path = os.path.join("/app/files", filename)
+    
+    # Ensure the resolved path is within the allowed directory
+    if not safe_path.startswith("/app/files/"):
+        return "Invalid file path"
+    
+    try:
+        with open(safe_path, 'r') as f:
+            return f.read()
+    except FileNotFoundError:
+        return "File not found"
 
 
 if __name__ == '__main__':
