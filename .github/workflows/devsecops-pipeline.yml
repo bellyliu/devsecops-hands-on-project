@@ -65,7 +65,7 @@ jobs:
         python -m pytest test_app.py -v --tb=short
 
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results
@@ -112,7 +112,7 @@ jobs:
           -Dsonar.organization=${{ github.repository_owner }}
 
     - name: Upload SonarCloud results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: sonarcloud-results
@@ -152,7 +152,7 @@ jobs:
         sarif_file: snyk.sarif
 
     - name: Upload Snyk results as artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: snyk-results
@@ -204,7 +204,7 @@ jobs:
         sarif_file: trivy-dockerfile-results.sarif
 
     - name: Upload Dockerfile scan results as artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: dockerfile-scan-results
@@ -278,7 +278,7 @@ jobs:
         summary: true
 
     - name: Upload Docker Scout results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: container-scan-results
@@ -304,7 +304,7 @@ jobs:
     
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: security-reports
 
@@ -324,7 +324,7 @@ jobs:
         echo "Check the **Security** tab in your repository for detailed vulnerability reports." >> $GITHUB_STEP_SUMMARY
 
     - name: Upload consolidated security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: consolidated-security-reports
         path: security-reports/
