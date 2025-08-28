@@ -13,9 +13,9 @@ import hashlib
 app = Flask(__name__)
 
 # ❌ SECURITY ISSUE: Hard-coded credentials (SonarQube will detect this)
-DATABASE_PASSWORD = "admin123"
-SECRET_KEY = "my-super-secret-key-12345"
-API_TOKEN = "sk-1234567890abcdef1234567890abcdef"
+DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
+SECRET_KEY = os.getenv("SECRET_KEY")
+API_TOKEN = os.getenv("API_TOKEN")
 
 
 @app.route('/vulnerable-user')
@@ -54,7 +54,7 @@ def weak_password_hash(password):
     SonarQube will detect MD5 as cryptographically weak
     """
     # MD5 is cryptographically broken
-    return hashlib.md5(password.encode()).hexdigest()
+    return hashlib.sha512(password.encode()).hexdigest()
 
 
 @app.route('/insecure-config')
