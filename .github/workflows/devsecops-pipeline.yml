@@ -125,18 +125,24 @@ jobs:
         coverage run -m pytest test_app.py --ignore=examples/
         coverage xml
 
-    - name: SonarCloud Scan
-      uses: SonarSource/sonarqube-scan-action@v5.3.0
+    - name: Install SonarCloud CLI
+      run: |
+        # Download and install SonarCloud CLI
+        wget -q https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+        unzip -q sonar-scanner-cli-5.0.1.3006-linux.zip
+        echo "$(pwd)/sonar-scanner-5.0.1.3006-linux/bin" >> $GITHUB_PATH
+
+    - name: Run SonarCloud Scan
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      with:
-        projectBaseDir: devsecops-pipeline
-        args: >
-          -Dsonar.projectBaseDir=devsecops-pipeline
-          -Dsonar.projectKey=${{ github.repository_owner }}_devsecops-pipeline
-          -Dsonar.organization=${{ github.repository_owner }}
-          -Dsonar.verbose=true
+      run: |
+        cd devsecops-pipeline
+        sonar-scanner \
+          -Dsonar.projectKey=bellyliu_devsecops-pipeline \
+          -Dsonar.organization=bellyliu \
+          -Dsonar.sources=.
+
 
     - name: Upload SonarCloud results
       uses: actions/upload-artifact@v4
