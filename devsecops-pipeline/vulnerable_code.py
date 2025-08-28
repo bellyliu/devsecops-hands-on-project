@@ -7,7 +7,7 @@ DO NOT USE THIS CODE IN PRODUCTION!
 
 import os
 import sqlite3
-from flask import Flask, request
+from flask import Flask, request, escape
 import hashlib
 
 app = Flask(__name__)
@@ -40,12 +40,12 @@ def get_vulnerable_user():
 @app.route('/vulnerable-greeting')
 def vulnerable_greeting():
     """
-    ❌ SECURITY ISSUE: Cross-Site Scripting (XSS)
-    SonarQube will detect this XSS vulnerability
+    ✅ FIXED: Cross-Site Scripting (XSS) prevented with proper escaping
+    User input is now escaped to prevent XSS attacks
     """
     name = request.args.get('name', 'World')
-    # Direct HTML output without escaping - XSS vulnerability
-    return f"<h1>Hello {name}!</h1>"
+    # Escape user input to prevent XSS vulnerability
+    return f"<h1>Hello {escape(name)}!</h1>"
 
 
 def weak_password_hash(password):
