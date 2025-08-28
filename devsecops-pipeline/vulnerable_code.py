@@ -11,12 +11,13 @@ from flask import Flask, request, escape
 import hashlib
 from flask_wtf.csrf import CSRFProtect
 
+# FIXED: Enable CSRF protection
 app = Flask(__name__)
 csrf = CSRFProtect()
 csrf.init_app(app)
 
 
-# ❌ SECURITY ISSUE: Hard-coded credentials (SonarQube will detect this)
+# FIXED: Using environment variables for sensitive information
 DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
 SECRET_KEY = os.getenv("SECRET_KEY")
 API_TOKEN = os.getenv("API_TOKEN")
@@ -25,14 +26,14 @@ API_TOKEN = os.getenv("API_TOKEN")
 @app.route('/vulnerable-user')
 def get_vulnerable_user():
     """
-    ❌ SECURITY ISSUE: SQL Injection vulnerability
-    SonarQube will detect this as a critical security issue
+    FIXED: SQL Injection vulnerability prevented with parameterized queries
+    Using parameterized queries to safely handle user input
     """
     user_id = request.args.get('id')
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
-    # This is vulnerable to SQL injection
+    # This is safe from SQL injection using parameterized queries
     query = "SELECT * FROM users WHERE id = :id"
     cursor.execute(query, {"id": user_id})
     result = cursor.fetchone()
@@ -44,7 +45,7 @@ def get_vulnerable_user():
 @app.route('/vulnerable-greeting')
 def vulnerable_greeting():
     """
-    ✅ FIXED: Cross-Site Scripting (XSS) prevented with proper escaping
+    FIXED: Cross-Site Scripting (XSS) prevented with proper escaping
     User input is now escaped to prevent XSS attacks
     """
     name = request.args.get('name', 'World')
@@ -54,17 +55,16 @@ def vulnerable_greeting():
 
 def weak_password_hash(password):
     """
-    ❌ SECURITY ISSUE: Weak cryptographic function
-    SonarQube will detect MD5 as cryptographically weak
+    Fixed: Use sha512 instead of MD5
     """
-    # MD5 is cryptographically broken
+    # SHA512 is cryptographically strong
     return hashlib.sha512(password.encode()).hexdigest()
 
 
 @app.route('/insecure-config')
 def insecure_config():
     """
-    ❌ SECURITY ISSUE: Exposing sensitive configuration
+    SECURITY ISSUE: Exposing sensitive configuration
     """
     config = {
         'database_password': DATABASE_PASSWORD,  # Hard-coded secret exposure
@@ -76,7 +76,7 @@ def insecure_config():
 
 def vulnerable_file_handling():
     """
-    ✅ FIXED: Path traversal vulnerability prevented with proper validation
+    FIXED: Path traversal vulnerability prevented with proper validation
     """
     filename = request.args.get('file')
     if not filename:
@@ -98,5 +98,5 @@ def vulnerable_file_handling():
 
 
 if __name__ == '__main__':
-    # ❌ SECURITY ISSUE: Debug mode in production
+    # Fixed security hostspots by disabling debug mode
     app.run(host='0.0.0.0', port=5000)
