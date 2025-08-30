@@ -165,7 +165,7 @@ jobs:
     - name: Generate Python SBOM
       run: |
         cd devsecops-pipeline
-        cyclonedx-py -r requirements.txt -o sbom-python.json --format json --schema-version 1.4
+        cyclonedx-py requirements -o sbom-python.json --format json --schema-version 1.4
 
     - name: Generate source code SBOM with Syft
       uses: anchore/sbom-action@v0
