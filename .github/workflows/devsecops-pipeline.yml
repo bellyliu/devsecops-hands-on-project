@@ -167,41 +167,11 @@ jobs:
         cd devsecops-pipeline
         cyclonedx-py requirements -o sbom-python.json
 
-    - name: Generate source code SBOM with Syft
-      uses: anchore/sbom-action@v0
-      with:
-        path: ./devsecops-pipeline
-        format: cyclonedx-json
-        output-file: sbom-source.json
-
-    - name: Merge SBOMs
-      run: |
-        cd devsecops-pipeline
-        # Combine Python dependencies and source code SBOMs
-        jq -s '
-          {
-            "bomFormat": "CycloneDX",
-            "specVersion": "1.4",
-            "serialNumber": ("urn:uuid:" + (now | tostring)),
-            "version": 1,
-            "metadata": .[0].metadata,
-            "components": (.[0].components + .[1].components | unique_by(.name))
-          }
-        ' sbom-python.json ../sbom-source.json > sbom-complete.json
-
-    - name: Validate SBOM
-      run: |
-        cd devsecops-pipeline
-        echo "📋 SBOM Components Summary:"
-        jq -r '.components[] | "- \(.name)@\(.version // "unknown") (\(.type))"' sbom-complete.json | head -20
-        echo ""
-        echo "📊 Total components: $(jq '.components | length' sbom-complete.json)"
-
     - name: Upload SBOM artifact
       uses: actions/upload-artifact@v4
       with:
         name: sbom-cyclonedx
-        path: devsecops-pipeline/sbom-complete.json
+        path: devsecops-pipeline/sbom-python.json
 
   sca-trivy:
     name: SCA - Trivy Vulnerability Scan
