@@ -192,7 +192,7 @@ jobs:
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: 'sbom'
-        scan-ref: 'sbom-complete.json'
+        scan-ref: 'sbom-python.json'
         format: 'sarif'
         output: 'trivy-sca-results.sarif'
         severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
@@ -255,7 +255,7 @@ jobs:
         path: |
           trivy-sca-results.sarif
           trivy-fs-results.json
-          sbom-complete.json
+          sbom-python.json
 
   dockerfile-scan:
     name: Dockerfile Security Scan
