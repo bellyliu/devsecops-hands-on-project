@@ -167,41 +167,11 @@ jobs:
         cd devsecops-pipeline
         cyclonedx-py requirements -o sbom-python.json
 
-    - name: Generate source code SBOM with Syft
-      uses: anchore/sbom-action@v0
-      with:
-        path: ./devsecops-pipeline
-        format: cyclonedx-json
-        output-file: sbom-source.json
-
-    - name: Merge SBOMs
-      run: |
-        cd devsecops-pipeline
-        # Combine Python dependencies and source code SBOMs
-        jq -s '
-          {
-            "bomFormat": "CycloneDX",
-            "specVersion": "1.4",
-            "serialNumber": ("urn:uuid:" + (now | tostring)),
-            "version": 1,
-            "metadata": .[0].metadata,
-            "components": (.[0].components + .[1].components | unique_by(.name))
-          }
-        ' sbom-python.json ../sbom-source.json > sbom-complete.json
-
-    - name: Validate SBOM
-      run: |
-        cd devsecops-pipeline
-        echo "📋 SBOM Components Summary:"
-        jq -r '.components[] | "- \(.name)@\(.version // "unknown") (\(.type))"' sbom-complete.json | head -20
-        echo ""
-        echo "📊 Total components: $(jq '.components | length' sbom-complete.json)"
-
     - name: Upload SBOM artifact
       uses: actions/upload-artifact@v4
       with:
         name: sbom-cyclonedx
-        path: devsecops-pipeline/sbom-complete.json
+        path: devsecops-pipeline/sbom-python.json
 
   sca-trivy:
     name: SCA - Trivy Vulnerability Scan
@@ -222,7 +192,7 @@ jobs:
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: 'sbom'
-        scan-ref: 'sbom-complete.json'
+        scan-ref: 'sbom-python.json'
         format: 'sarif'
         output: 'trivy-sca-results.sarif'
         severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
@@ -238,7 +208,26 @@ jobs:
         severity: 'MEDIUM,HIGH,CRITICAL'
         exit-code: '0'
 
-    - name: Check for vulnerabilities and fail if found
+    - name: Generate Trivy table report for PR comment
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "📦 Generating table report for PR comment..."
+        
+        # Install trivy if not available
+        if ! command -v trivy &> /dev/null; then
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.45.0
+        fi
+        
+        # Generate table format for PR comment
+        echo "## SBOM Vulnerability Scan Results" > trivy-table-report.txt
+        trivy sbom sbom-python.json --format table --severity HIGH,CRITICAL >> trivy-table-report.txt 2>/dev/null || echo "No SBOM vulnerabilities found" >> trivy-table-report.txt
+        
+        echo "" >> trivy-table-report.txt
+        echo "## Filesystem Vulnerability Scan Results" >> trivy-table-report.txt
+        trivy fs devsecops-pipeline --format table --severity HIGH,CRITICAL >> trivy-table-report.txt 2>/dev/null || echo "No filesystem vulnerabilities found" >> trivy-table-report.txt
+
+    - name: Check for vulnerabilities and set outputs
+      id: vuln-check
       run: |
         echo "🔍 Analyzing Trivy scan results..."
         
@@ -261,15 +250,81 @@ jobs:
         TOTAL_VULNS=$((SBOM_VULNS + FS_VULNS))
         echo "🚨 Total vulnerabilities requiring attention: $TOTAL_VULNS"
         
+        # Set outputs for PR comment
+        echo "total_vulns=$TOTAL_VULNS" >> $GITHUB_OUTPUT
+        echo "sbom_vulns=$SBOM_VULNS" >> $GITHUB_OUTPUT
+        echo "fs_vulns=$FS_VULNS" >> $GITHUB_OUTPUT
+        
         if [ "$TOTAL_VULNS" -gt 0 ]; then
           echo ""
-          echo "❌ Vulnerabilities found! Failing the build."
+          echo "❌ Vulnerabilities found! Will comment on PR and fail the build."
           echo "📋 Please review the security scan results and remediate before merging."
-          exit 1
+          echo "has_vulns=true" >> $GITHUB_OUTPUT
         else
           echo ""
           echo "✅ No vulnerabilities found! Build can proceed."
+          echo "has_vulns=false" >> $GITHUB_OUTPUT
         fi
+
+    - name: Comment on PR with vulnerability results
+      if: github.event_name == 'pull_request' && steps.vuln-check.outputs.has_vulns == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read the table report
+          let tableReport = '';
+          try {
+            tableReport = fs.readFileSync('trivy-table-report.txt', 'utf8');
+          } catch (error) {
+            tableReport = 'Could not read detailed vulnerability report.';
+          }
+          
+          const totalVulns = '${{ steps.vuln-check.outputs.total_vulns }}';
+          const sbomVulns = '${{ steps.vuln-check.outputs.sbom_vulns }}';
+          const fsVulns = '${{ steps.vuln-check.outputs.fs_vulns }}';
+          
+          const body = `## 🚨 Security Vulnerability Alert
+          
+          **⚠️ Critical/High severity vulnerabilities detected in this PR!**
+          
+          ### Summary
+          - 📦 **SBOM Scan**: ${sbomVulns} vulnerabilities found
+          - 📁 **Filesystem Scan**: ${fsVulns} vulnerabilities found  
+          - 🚨 **Total**: ${totalVulns} vulnerabilities requiring attention
+          
+          ### Detailed Results
+          
+          \`\`\`
+          ${tableReport}
+          \`\`\`
+          
+          ### Next Steps
+          1. 🔍 Review the vulnerabilities listed above
+          2. 📋 Check the **Security** tab for SARIF reports with more details
+          3. 🛠️ Update dependencies to patched versions if available
+          4. 🔒 Consider alternative packages if no patches are available
+          5. 📝 Document any accepted risks with justification
+          
+          **This PR cannot be merged until vulnerabilities are resolved or properly documented as accepted risks.**
+          
+          ---
+          *Generated by Trivy SCA scan in workflow: \`${{ github.workflow }}\`*`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });
+
+    - name: Fail build if vulnerabilities found
+      if: steps.vuln-check.outputs.has_vulns == 'true'
+      run: |
+        echo "❌ Build failed due to security vulnerabilities!"
+        echo "📋 Check the PR comment and Security tab for details."
+        exit 1
 
     - name: Upload Trivy SCA results to GitHub Code Scanning
       uses: github/codeql-action/upload-sarif@v2
@@ -285,7 +340,8 @@ jobs:
         path: |
           trivy-sca-results.sarif
           trivy-fs-results.json
-          sbom-complete.json
+          trivy-table-report.txt
+          sbom-python.json
 
   dockerfile-scan:
     name: Dockerfile Security Scan
