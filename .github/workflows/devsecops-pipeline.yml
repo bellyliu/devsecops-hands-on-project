@@ -141,8 +141,8 @@ jobs:
         name: sonarcloud-results
         path: devsecops-pipeline/.scannerwork/
 
-  sca-snyk:
-    name: SCA - Snyk Vulnerability Scan
+  sbom-generation:
+    name: Generate SBOM
     runs-on: ubuntu-latest
     needs: lint-and-test
     
@@ -160,26 +160,132 @@ jobs:
         cd devsecops-pipeline
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install cyclonedx-bom
 
-    - name: Run Snyk to check for vulnerabilities
-      uses: snyk/actions/python@master
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    - name: Generate Python SBOM
+      run: |
+        cd devsecops-pipeline
+        cyclonedx-py requirements -o sbom-python.json
+
+    - name: Generate source code SBOM with Syft
+      uses: anchore/sbom-action@v0
       with:
-        args: --severity-threshold=high --file=devsecops-pipeline/requirements.txt
+        path: ./devsecops-pipeline
+        format: cyclonedx-json
+        output-file: sbom-source.json
 
-    - name: Upload Snyk results to GitHub Code Scanning
+    - name: Merge SBOMs
+      run: |
+        cd devsecops-pipeline
+        # Combine Python dependencies and source code SBOMs
+        jq -s '
+          {
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.4",
+            "serialNumber": ("urn:uuid:" + (now | tostring)),
+            "version": 1,
+            "metadata": .[0].metadata,
+            "components": (.[0].components + .[1].components | unique_by(.name))
+          }
+        ' sbom-python.json ../sbom-source.json > sbom-complete.json
+
+    - name: Validate SBOM
+      run: |
+        cd devsecops-pipeline
+        echo "📋 SBOM Components Summary:"
+        jq -r '.components[] | "- \(.name)@\(.version // "unknown") (\(.type))"' sbom-complete.json | head -20
+        echo ""
+        echo "📊 Total components: $(jq '.components | length' sbom-complete.json)"
+
+    - name: Upload SBOM artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: sbom-cyclonedx
+        path: devsecops-pipeline/sbom-complete.json
+
+  sca-trivy:
+    name: SCA - Trivy Vulnerability Scan
+    runs-on: ubuntu-latest
+    needs: sbom-generation
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download SBOM artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: sbom-cyclonedx
+        path: ./
+
+    - name: Run Trivy SBOM vulnerability scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'sbom'
+        scan-ref: 'sbom-complete.json'
+        format: 'sarif'
+        output: 'trivy-sca-results.sarif'
+        severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
+        exit-code: '0'  # Don't fail here, we'll check manually
+
+    - name: Run Trivy filesystem scan as backup
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: 'devsecops-pipeline'
+        format: 'json'
+        output: 'trivy-fs-results.json'
+        severity: 'MEDIUM,HIGH,CRITICAL'
+        exit-code: '0'
+
+    - name: Check for vulnerabilities and fail if found
+      run: |
+        echo "🔍 Analyzing Trivy scan results..."
+        
+        # Check SBOM scan results
+        if [ -f "trivy-sca-results.sarif" ]; then
+          SBOM_VULNS=$(jq '.runs[0].results | length' trivy-sca-results.sarif 2>/dev/null || echo "0")
+          echo "📦 SBOM scan found: $SBOM_VULNS vulnerabilities"
+        else
+          SBOM_VULNS=0
+        fi
+        
+        # Check filesystem scan results
+        if [ -f "trivy-fs-results.json" ]; then
+          FS_VULNS=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH" or .Severity == "CRITICAL")] | length' trivy-fs-results.json 2>/dev/null || echo "0")
+          echo "📁 Filesystem scan found: $FS_VULNS high/critical vulnerabilities"
+        else
+          FS_VULNS=0
+        fi
+        
+        TOTAL_VULNS=$((SBOM_VULNS + FS_VULNS))
+        echo "🚨 Total vulnerabilities requiring attention: $TOTAL_VULNS"
+        
+        if [ "$TOTAL_VULNS" -gt 0 ]; then
+          echo ""
+          echo "❌ Vulnerabilities found! Failing the build."
+          echo "📋 Please review the security scan results and remediate before merging."
+          exit 1
+        else
+          echo ""
+          echo "✅ No vulnerabilities found! Build can proceed."
+        fi
+
+    - name: Upload Trivy SCA results to GitHub Code Scanning
       uses: github/codeql-action/upload-sarif@v2
       if: always()
       with:
-        sarif_file: snyk.sarif
+        sarif_file: trivy-sca-results.sarif
 
-    - name: Upload Snyk results as artifact
+    - name: Upload Trivy SCA results as artifact
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: snyk-results
-        path: snyk.sarif
+        name: trivy-sca-results
+        path: |
+          trivy-sca-results.sarif
+          trivy-fs-results.json
+          sbom-complete.json
 
   dockerfile-scan:
     name: Dockerfile Security Scan
@@ -206,14 +312,6 @@ jobs:
         format: 'sarif'
         output: 'trivy-dockerfile-results.sarif'
 
-    - name: Run Snyk Dockerfile scan
-      uses: snyk/actions/docker@master
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        image: python:3.11-slim
-        args: --file=devsecops-pipeline/Dockerfile --severity-threshold=medium
-
     - name: Upload Hadolint results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v2
       if: always()
@@ -238,7 +336,7 @@ jobs:
   build-and-scan:
     name: Build & Scan Container
     runs-on: ubuntu-latest
-    needs: [sast-sonarcloud, sca-snyk, dockerfile-scan]
+    needs: [sast-sonarcloud, sca-trivy, dockerfile-scan]
     
     steps:
     - name: Checkout code
@@ -322,7 +420,7 @@ jobs:
   security-summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [sast-sonarcloud, sca-snyk, dockerfile-scan, build-and-scan]
+    needs: [sast-sonarcloud, sca-trivy, dockerfile-scan, build-and-scan]
     if: always()
     
     steps:
@@ -338,9 +436,10 @@ jobs:
         echo "### Pipeline Status:" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ **Lint & Test**: ${{ needs.lint-and-test.result }}" >> $GITHUB_STEP_SUMMARY
         echo "- 🔍 **SAST (SonarCloud)**: ${{ needs.sast-sonarcloud.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- 📦 **SCA (Snyk)**: ${{ needs.sca-snyk.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- � **Dockerfile Scan**: ${{ needs.dockerfile-scan.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- �🐳 **Container Scan**: ${{ needs.build-and-scan.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- � **SBOM Generation**: ${{ needs.sbom-generation.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- �📦 **SCA (Trivy)**: ${{ needs.sca-trivy.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- 🐋 **Dockerfile Scan**: ${{ needs.dockerfile-scan.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- 🐳 **Container Scan**: ${{ needs.build-and-scan.result }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Security Reports:" >> $GITHUB_STEP_SUMMARY
         echo "Security scan results have been uploaded to the GitHub Security tab." >> $GITHUB_STEP_SUMMARY
