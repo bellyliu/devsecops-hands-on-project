@@ -1,0 +1,42 @@
+# Example vulnerable Dockerfile that demonstrates security issues.
+# This file shows common Dockerfile security problems that Hadolint and Trivy will detect.
+# DO NOT USE THIS DOCKERFILE IN PRODUCTION!
+
+# Vulnerable: Using untagged image (Hadolint DL3006)
+FROM python
+
+# Vulnerable: Running as root user throughout (Hadolint DL3002)
+
+WORKDIR /app
+
+# Vulnerable: Unpinned package versions (Hadolint DL3008)
+# Vulnerable: Not cleaning package cache (Hadolint DL3009)
+RUN apt-get update && apt-get install -y \
+    curl \
+    vim \
+    wget
+
+# Vulnerable: Using ADD instead of COPY (Hadolint DL3020)
+ADD requirements.txt .
+ADD app.py .
+
+# Vulnerable: Pip install without version pinning
+RUN pip install flask requests
+
+# Vulnerable: Copying secrets into image
+COPY secret_key.txt /app/secrets/
+COPY database_password.txt /app/secrets/
+
+# Vulnerable: Hard-coded secrets in environment variables
+ENV DATABASE_PASSWORD=admin123
+ENV SECRET_KEY=my-super-secret-key-12345
+
+# Vulnerable: Exposing sensitive ports
+EXPOSE 22
+EXPOSE 3306
+EXPOSE 5432
+EXPOSE 5000
+
+# Vulnerable: Shell form CMD (Hadolint DL3025)
+# Vulnerable: Still running as root
+CMD python app.py
