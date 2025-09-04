@@ -1,0 +1,33 @@
+# Example vulnerable requirements.txt
+# This file demonstrates dependency vulnerabilities that Snyk will detect
+# DO NOT USE THESE VERSIONS IN PRODUCTION!
+
+# Vulnerable: Old Flask version with known CVEs
+Flask==1.0.2
+
+# Vulnerable: Old requests version with security issues  
+requests==2.18.4
+
+# Vulnerable: urllib3 with CRLF injection vulnerabilities
+urllib3==1.24.1
+
+# Vulnerable: Jinja2 with XSS vulnerabilities
+Jinja2==2.10
+
+# Vulnerable: cryptography with weak crypto issues
+cryptography==2.1.4
+
+# Vulnerable: SQLAlchemy with SQL injection issues
+SQLAlchemy==1.2.0
+
+# Vulnerable: Werkzeug with security vulnerabilities
+Werkzeug==0.14.1
+
+# Vulnerable: PyYAML with arbitrary code execution
+PyYAML==3.13
+
+# Vulnerable: Pillow with multiple CVEs
+Pillow==5.0.0
+
+# Vulnerable: lxml with XML external entity vulnerabilities
+lxml==4.2.0

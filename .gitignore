@@ -1,0 +1,4 @@
+venv/
+.sonarlint/
+*token*
+*.json
