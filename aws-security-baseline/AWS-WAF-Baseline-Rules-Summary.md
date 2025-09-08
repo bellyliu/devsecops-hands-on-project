@@ -144,6 +144,21 @@ Admin Protection ──────────────── If using admin
 Known Bad Inputs ──────────────── Highly recommended for security
 ```
 
+### 🏗️ Dev Environment Implementation Experience
+
+**Baseline Protection Deployed:**
+
+- ✅ Successfully implemented in development environment
+- ✅ All three baseline rule groups activated and operational
+- ✅ Monitoring and logging configured for rule evaluation
+
+**Key Learnings from Dev Implementation:**
+
+1. **Managed Rules are Immutable** - Cannot customize rule parameters
+2. **Action Overrides Work Well** - Easy to switch from BLOCK to COUNT for testing
+3. **Custom Rules Required** - Needed for application-specific exceptions
+4. **Rule Ordering Matters** - Custom exceptions must be placed strategically
+
 ### 💡 Best Practices
 
 1. **Start with Core Rule Set**
@@ -166,7 +181,57 @@ Known Bad Inputs ──────────────── Highly recomme
    - Adjust rule actions based on false positives
    - Use labels for custom monitoring
 
+### 🎯 Common Implementation Scenarios
+
+**Scenario 1: Mobile App with Large Request Bodies**
+
+- **Problem**: `SizeRestrictions_BODY` blocks file uploads >8KB
+- **Solution**: Create custom rule to ALLOW large bodies for `/api/upload/*` paths
+- **Implementation**: Place custom ALLOW rule before Core Rule Set
+
+**Scenario 2: Monitoring Tools Blocked by User-Agent Rules**
+
+- **Problem**: `UserAgent_BadBots_HEADER` blocks legitimate monitoring (e.g., Datadog, New Relic)
+- **Solution**: Create custom rule to ALLOW specific trusted User-Agent patterns
+- **Implementation**: Whitelist known monitoring tool user agents
+
+**Scenario 3: API Endpoints Requiring Specific Headers**
+
+- **Problem**: Admin protection blocks legitimate admin API calls
+- **Solution**: Override `AdminProtection_URIPATH` to COUNT mode and create custom logic
+- **Implementation**: Use IP-based restrictions with custom rules instead
+
 ### ⚠️ Important Considerations
+
+**🚫 Managed Rules Limitations:**
+
+- **Cannot Modify Rules**: AWS Managed Rules are read-only and cannot be customized
+  - ❌ Cannot increase `SizeRestrictions_BODY` limits beyond default thresholds
+  - ❌ Cannot update `UserAgent_BadBots_HEADER` patterns or whitelist specific user agents
+  - ❌ Cannot modify any rule logic, patterns, detection criteria, or thresholds
+  - ❌ Cannot add exceptions directly to managed rules
+
+**✅ Action Override Options:**
+You can only override the default BLOCK action to:
+
+- `COUNT` - Log matches without blocking (ideal for testing/monitoring)
+- `ALLOW` - Allow requests that match the rule (bypass the rule)
+- `CAPTCHA` - Present CAPTCHA challenge to users before allowing access
+- `CHALLENGE` - Present JavaScript challenge to verify legitimate clients
+
+**📝 Custom Rules for Application-Specific Requirements:**
+When managed rules are too restrictive, create custom rules to:
+
+- **Allow Specific User-Agents**: Whitelist legitimate bots, monitoring tools, or internal applications
+- **Permit Larger Request Bodies**: Support file uploads or API endpoints requiring >8KB payloads
+- **Whitelist IP Ranges**: Allow trusted sources (office IPs, CDN origins, partner systems)
+- **Create Targeted Exceptions**: Use specific conditions (path, headers, query parameters)
+
+**🔄 Rule Ordering Strategy:**
+
+1. Place custom **ALLOW** rules BEFORE managed rule groups in your Web ACL
+2. Custom rules should be as specific as possible to minimize security gaps
+3. Use rule labels to track custom exception usage
 
 **Body Size Limits:**
 
@@ -228,10 +293,38 @@ All baseline rule groups add labels to web requests:
 
 ## 🚀 Quick Start
 
+### 🏃‍♂️ Rapid Deployment (Proven in Dev Environment)
+
 1. **Enable Core Rule Set** for baseline OWASP protection
+
+   - Start with COUNT mode to assess impact
+   - Switch to BLOCK after validating no false positives
+
 2. **Add Known Bad Inputs** for CVE protection
+
+   - Generally safe to deploy in BLOCK mode immediately
+   - Minimal false positives for most applications
+
 3. **Include Admin Protection** if applicable
-4. **Monitor CloudWatch metrics** for tuning
-5. **Review logs regularly** for security insights
+
+   - Test thoroughly with legitimate admin access patterns
+   - Consider COUNT mode initially for admin endpoints
+
+4. **Create Custom Exception Rules**
+
+   - Identify application-specific requirements early
+   - Document all custom exceptions for security review
+
+5. **Monitor and Iterate**
+   - Use CloudWatch metrics for ongoing tuning
+   - Review WAF logs regularly for blocked legitimate traffic
+   - Maintain documentation of all customizations
+
+### ⚡ Development Environment Tips
+
+- **Start Conservative**: Begin with COUNT actions, then gradually enable BLOCK
+- **Test Thoroughly**: Validate all application flows before production deployment
+- **Document Exceptions**: Keep detailed records of custom rules and their justifications
+- **Plan for Scale**: Consider WCU capacity for production environments (1,000+ WCU baseline)
 
 > **Note**: This summary is based on the most recent static version. Always check the AWS documentation for the latest updates and version information.
