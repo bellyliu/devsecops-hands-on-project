@@ -91,6 +91,13 @@ AWS WAF baseline managed rule groups provide **general protection against a wide
 | ------------------------- | ------------------------------- | ------ |
 | `AdminProtection_URIPATH` | Blocks admin-reserved URI paths | Block  |
 
+#### 🏗️ **Dev Environment Experience**
+
+- ✅ **Successfully Added**: `AWSManagedRulesAdminProtectionRuleSet` deployed and operational
+- 🎯 **Confirmed Blocking**: Effectively blocks requests to admin pages as expected
+- ❓ **Limited Visibility**: Unclear what other specific paths might be blocked beyond obvious admin routes
+- 💡 **Recommendation**: Monitor WAF logs closely when first deployed to identify any legitimate admin traffic being blocked
+
 ---
 
 ### 3. Known Bad Inputs Managed Rule Group
@@ -130,6 +137,14 @@ AWS WAF baseline managed rule groups provide **general protection against a wide
 | **Log4j RCE**   | 4 rules    | Headers, Body, URI, Query String |
 | **Bad Inputs**  | 3 rules    | Headers, Methods, Paths          |
 
+#### 🏗️ **Dev Environment Experience**
+
+- ✅ **Successfully Added**: `AWSManagedRulesKnownBadInputsRuleSet` deployed and operational
+- 🎯 **Confirmed Protection**: Successfully blocks known bad inputs like `jndi:ldap` patterns (Log4j exploits)
+- ✅ **Log4j Protection Verified**: Effective at preventing Log4j vulnerability exploitation attempts
+- ❓ **Broader Impact Unknown**: Uncertain about other specific request types that may be blocked beyond documented patterns
+- 💡 **Recommendation**: Enable comprehensive logging to understand full scope of blocked requests during initial deployment
+
 ---
 
 ## 🔧 Implementation Guidelines
@@ -149,7 +164,9 @@ Known Bad Inputs ──────────────── Highly recomme
 **Baseline Protection Deployed:**
 
 - ✅ Successfully implemented in development environment
-- ✅ All three baseline rule groups activated and operational
+- ✅ **Core Rule Set (CRS)**: Operational with comprehensive OWASP protection
+- ✅ **Admin Protection**: Recently added `AWSManagedRulesAdminProtectionRuleSet` - confirmed blocking admin page access
+- ✅ **Known Bad Inputs**: Recently added `AWSManagedRulesKnownBadInputsRuleSet` - verified Log4j `jndi:ldap` pattern blocking
 - ✅ Monitoring and logging configured for rule evaluation
 
 **Key Learnings from Dev Implementation:**
@@ -158,6 +175,7 @@ Known Bad Inputs ──────────────── Highly recomme
 2. **Action Overrides Work Well** - Easy to switch from BLOCK to COUNT for testing
 3. **Custom Rules Required** - Needed for application-specific exceptions
 4. **Rule Ordering Matters** - Custom exceptions must be placed strategically
+5. **Limited Rule Transparency** - Hard to predict all patterns that will be blocked without comprehensive testing
 
 ### 💡 Best Practices
 
